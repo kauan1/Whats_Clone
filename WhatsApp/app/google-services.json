@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "679127188257",
+    "firebase_url": "https://chatonline-2c1fe.firebaseio.com",
+    "project_id": "chatonline-2c1fe",
+    "storage_bucket": "chatonline-2c1fe.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:679127188257:android:ad429247f559cf79adb460",
+        "android_client_info": {
+          "package_name": "com.example.j218927_k219594.whatsapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "679127188257-0u0ihalb5gje4scud6nnmnrhh1r8lsl4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.j218927_k219594.whatsapp",
+            "certificate_hash": "1e7106ac4c1effc60f52e07015903c538480db79"
+          }
+        },
+        {
+          "client_id": "679127188257-ti0l1kb9nvdtgrphg6mrm4q1aq545h88.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8autXSNxiHB_UfVNiA4l4_gqb_QKLMk0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "679127188257-ti0l1kb9nvdtgrphg6mrm4q1aq545h88.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,195 @@
+package com.example.j218927_k219594.whatsapp.activity;
+
+import android.Manifest;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Bundle;
+
+import com.example.j218927_k219594.whatsapp.adapter.GrupoSelecionadoAdapter;
+import com.example.j218927_k219594.whatsapp.config.ConfiguracaoFirebase;
+import com.example.j218927_k219594.whatsapp.helper.UsuarioFirebase;
+import com.example.j218927_k219594.whatsapp.model.Grupo;
+import com.example.j218927_k219594.whatsapp.model.Usuario;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.example.j218927_k219594.whatsapp.R;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import de.hdodenhof.circleimageview.CircleImageView;
+
+public class CadastroGrupoActivity extends AppCompatActivity {
+    public String[] permissoesNecessarias = new String[]{
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.CAMERA
+    };
+
+    private List<Usuario> listaMembrosSelecionados = new ArrayList<>();
+    private TextView textTotalParticipantes;
+    private GrupoSelecionadoAdapter grupoSelecionadoAdapter;
+    private RecyclerView recyclerMembros;
+    private CircleImageView imageGrupo;
+    private static final int SELECAO_GALERIA = 200;
+    private StorageReference storageReference;
+    private Grupo grupo;
+    private FloatingActionButton fabCadastrar;
+    private EditText editNomGrupo;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_cadastro_grupo);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+
+        toolbar.setTitle("Novo Grupo");
+        toolbar.setSubtitle("Defina o nome");
+
+        setSupportActionBar(toolbar);
+
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        //Configurações iniciais
+        textTotalParticipantes = findViewById(R.id.textTotalParticpantes);
+        recyclerMembros = findViewById(R.id.recyclerMembrosGrupo);
+        imageGrupo = findViewById(R.id.circleImageFotoGrupo);
+        storageReference = ConfiguracaoFirebase.getFirebaseStorage();
+        grupo = new Grupo();
+        fabCadastrar = findViewById(R.id.fabSalvarGrupo);
+        editNomGrupo = findViewById(R.id.editNomeGrupo);
+
+        //Configurar evento de clique
+        imageGrupo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                if(i.resolveActivity(getPackageManager()) != null){
+                    startActivityForResult(i,SELECAO_GALERIA);
+
+                }
+            }
+        });
+
+
+        //Recuperar lista de membros passada
+        if(getIntent().getExtras() != null){
+            List<Usuario> membros = (List<Usuario>) getIntent().getExtras().getSerializable("membros");
+            listaMembrosSelecionados.addAll(membros);
+        }
+
+        textTotalParticipantes.setText("Participantes: "+listaMembrosSelecionados.size());
+
+        grupoSelecionadoAdapter = new GrupoSelecionadoAdapter(listaMembrosSelecionados,getApplicationContext());
+
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(
+                getApplicationContext(),
+                RecyclerView.HORIZONTAL,
+                false
+        );
+
+        recyclerMembros.setLayoutManager(layoutManager);
+        recyclerMembros.setHasFixedSize(true);
+        recyclerMembros.setAdapter(grupoSelecionadoAdapter);
+
+        fabCadastrar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String nomeGrupo = editNomGrupo.getText().toString();
+
+                //Adicionar o usuario logado
+                listaMembrosSelecionados.add(UsuarioFirebase.getDadosUsuarioLogado());
+                grupo.setMembros(listaMembrosSelecionados);
+
+                grupo.setNome(nomeGrupo);
+                grupo.salvar();
+
+                Intent i = new Intent(CadastroGrupoActivity.this, ChatActivity.class);
+                i.putExtra("chatGrupo", grupo);
+                startActivity(i);
+
+            }
+        });
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(resultCode == RESULT_OK){
+            Bitmap imagem = null;
+            try {
+
+                Uri localImagemSelecionada = data.getData();
+                imagem = MediaStore.Images.Media.getBitmap(getContentResolver(), localImagemSelecionada);
+                if (imagem != null){
+                    fabCadastrar.setEnabled(false);
+                    imageGrupo.setImageBitmap(imagem);
+
+                    //Recuperar dados da imagem para o firebase
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    imagem.compress(Bitmap.CompressFormat.JPEG, 70,baos);
+                    byte[] dadosImagem = baos.toByteArray();
+
+                    //salvando no firebase
+                    final StorageReference imagemRef = storageReference
+                            .child("imagens")
+                            .child("grupos")
+                            .child(grupo.getId()+".jpeg");
+
+                    UploadTask uploadTask = imagemRef.putBytes(dadosImagem);
+                    uploadTask.addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Toast.makeText(CadastroGrupoActivity.this,
+                                    "Erro ao fazer upload da imagem",
+                                    Toast.LENGTH_SHORT).show();
+                            fabCadastrar.setEnabled(true);
+                        }
+                    }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            Toast.makeText(CadastroGrupoActivity.this,
+                                    "Sucesso ao fazer upload da imagem",
+                                    Toast.LENGTH_SHORT).show();
+
+                            fabCadastrar.setEnabled(true);
+                            imagemRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                                @Override
+                                public void onSuccess(Uri uri) {
+                                    String url = uri.toString();
+                                    grupo.setFoto(url);
+                                }
+                            });
+
+                        }
+                    });
+
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+}
